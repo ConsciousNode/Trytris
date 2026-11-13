@@ -17,3 +17,10 @@ Moving a row down by one on a triangular grid turns every triangle upside down. 
 
 ## Credits
 Spec by Kham and Ed Interim (`SPEC.md`). Built by Gemini Argon. Audited by Kehai Interim (notes in the `REPORT` block at the bottom of `index.html`).
+
+## Prior art and neighbors
+Falling blocks on triangular grids have been done before (for example [Triangular Tetris](https://quuxplusone.github.io/blog/2023/05/19/triangular-tetris) and [MultiMino 2: Polyform](https://axelfox149.itch.io/polyform)), and the balanced-ternary VM [SBTCVM](https://sbtcvm.blogspot.com) has its own ternary games, including *Falling Ternary Targets*. A native TritOS version (App 11) is in the works for the [Triton](https://github.com/ConsciousNode/Triton) balanced-ternary machine.
+
+---
+
+*Tetris was born in Moscow in 1984, a decade after Moscow stopped building ternary computers. Trytris brings the idea to the machine it never got to meet.*
