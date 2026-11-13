@@ -447,9 +447,10 @@
     }
 
     #board-svg {
+      /* [Audit fix 2026-11-13] 12 triangle columns span 6.5 units (not 13): size the frame to the board */
       display: block;
-      width: 280px;
-      height: 498px;
+      width: 200px;
+      height: 633px;
     }
 
     .board-overlay {
@@ -778,7 +779,7 @@
 
       <div class="arena-wrap">
         <div class="svg-board-container">
-          <svg id="board-svg" viewBox="0 0 13 21.6" xmlns="http://www.w3.org/2000/svg" aria-label="Trytris Equilateral Triangular Grid"></svg>
+          <svg id="board-svg" viewBox="-0.05 -0.05 6.6 20.9" xmlns="http://www.w3.org/2000/svg" aria-label="Trytris Equilateral Triangular Grid"></svg>
           <div id="board-overlay" class="board-overlay">
             <div class="overlay-title" id="overlay-title-text">PAUSED</div>
             <div id="overlay-sub-text" style="color: var(--text-muted); font-family: var(--font-mono); font-size: 12px;">Press Resume or New Game</div>
@@ -835,7 +836,7 @@
 
       <div class="section-box">
         <div class="section-title">
-          <span>Self-Test Suite (17 Assertions)</span>
+          <span>Self-Test Suite (18 Assertions)</span>
           <button type="button" id="btn-run-tests">Re-Run Tests</button>
         </div>
         <div id="test-summary-bar" style="font-family: var(--font-mono); font-size: 11px; margin-bottom: 6px; color: var(--text-muted);">
@@ -1829,17 +1830,32 @@
         // Wait: can lockActivePiece lock a piece when its cells fill the single missing column in 3 rows?
         // Yes! lockActivePiece writes each cell of activePiece onto `this.board[r][c]`.
         // Even if the other cells of H11 land on already-occupied cells in rows 25 and 26, `this.board[r][c]` stays occupied and all 3 rows (24, 25, 26) become 12/12 full and clear simultaneously!
+        // [Audit fix 2026-11-13] Legal placement: seed rows 24-26 everywhere EXCEPT the cells H10 will occupy,
+        // so the lock fills exactly the gaps (the delivered version locked on top of occupied cells).
+        eng.activePiece = { def: PIECE_BY_ID['H10'], rotIndex: 0, r: 24, c: 4 };
+        const holes = new Set(eng.getPieceWorldCells().map(([r, c]) => r + ',' + c));
         for (const r of [24, 25, 26]) {
           for (let c = 0; c < GRID_COLS; c++) {
-            if (c !== 4) {
-              eng.board[r][c] = { color: '#22d3ee', pieceId: 'SEED', slug: 'seed' };
-            }
+            if (!holes.has(r + ',' + c)) eng.board[r][c] = { color: '#22d3ee', pieceId: 'SEED', slug: 'seed' };
           }
         }
-        eng.activePiece = { def: PIECE_BY_ID['H10'], rotIndex: 0, r: 24, c: 4 };
+        const legal = eng.canPlace(eng.activePiece.def, 0, 24, 4);
         eng.lockActivePiece();
-        const pass = achSet.has('Triforce') && eng.lines === 3;
-        record(17, 'Achievement — Triforce fires', pass, `3 rows missing col 4 filled simultaneously -> lines=${eng.lines}, Triforce=${achSet.has('Triforce')}`);
+        const pass = legal && achSet.has('Triforce') && eng.lines === 3;
+        record(17, 'Achievement — Triforce fires', pass, `Legal H10 lock fills the gaps of 3 rows -> lines=${eng.lines}, Triforce=${achSet.has('Triforce')}`);
+      }
+
+      // 18. Ternary Negation — an odd number of cleared rows negates every trit above it (T <-> F)
+      {
+        const eng = new TrytrisEngine({ seed: 42, mode: 'NORMAL' });
+        eng.activePiece = null;
+        eng.board[20][4] = { color: '#38bdf8', pieceId: 'MARK', slug: 'mark' };   // (20+4) even -> ▲ = T
+        for (let c = 0; c < GRID_COLS; c++) eng.board[27][c] = { color: '#f59e0b', pieceId: 'F', slug: 'f' };
+        const before = encodeBoardBalancedTernary(eng.board, false)[(20 - BUFFER_ROWS) * GRID_COLS + 4];
+        eng.resolveFullRows(null);
+        const after = encodeBoardBalancedTernary(eng.board, false)[(21 - BUFFER_ROWS) * GRID_COLS + 4];
+        const pass = before === 'T' && after === 'F' && eng.board[21][4] && eng.board[21][4].pieceId === 'MARK';
+        record(18, 'Ternary Negation — odd clear flips T/F above', pass, `Cell above a 1-row clear read ${before}, now reads ${after}`);
       }
 
       return results;
@@ -2196,7 +2212,7 @@
 
       const badge = document.getElementById('test-ready-badge');
       if (allPassed) {
-        badge.textContent = 'READY (17/17 PASS)';
+        badge.textContent = `READY (${passCount}/${results.length} PASS)`;
         badge.className = 'ready-badge ready';
       } else {
         badge.textContent = `FAILED (${passCount}/${results.length})`;
@@ -2405,7 +2421,7 @@
   - Not built:
     * None (all specified components implemented in this single file).
 
-  TEST RESULTS (17 / 17 PASS):
+  TEST RESULTS (18 / 18 PASS in Chrome after audit fixes, 2026-11-13; #18 added, #17 rewritten):
   - #1 Geometry — triangle height: PASS
   - #2 Geometry — vertex adjacency: PASS
   - #3 Piece count — tetriamond: PASS
@@ -2423,16 +2439,33 @@
   - #15 Scoring — level multiplier: PASS
   - #16 Achievement — Zero State fires: PASS
   - #17 Achievement — Triforce fires: PASS
+  - #18 Ternary Negation — odd clear flips T/F above: PASS
   - Failures: None (0 failures).
 
   DEVIATIONS FROM SPEC:
   - Free vs. One-Sided Tetriamonds: Strictly under 2D reflections (free polyiamonds), there are 3 free tetriamonds and 4 one-sided tetriamonds (because the I-bar tetriamond is chiral, whereas crook and pyramid are achiral). To satisfy both "4 free tetriamonds" and Test #3 ("Default mode piece vocabulary contains exactly 4 distinct pieces"), both chiral orientations of the I-bar (P1 and P2) are included alongside the crook (P3) and pyramid/triangle (P4), yielding 4 distinct order-4 polyiamonds with rotational symmetry orders 3, 3, 6, and 2.
   - Hexiamond Nomenclature: Standard polyiamond literature names H3 "crown"; to match the 12-name list in the specification (triangle, rhombus, hook, parallelogram, snake, sphinx, hexagon, butterfly, chevron, lobster, yacht, bat), H3 is labeled `triangle (H3)`.
 
+  FEATURE (KEPT ON PURPOSE, 2026-11-13): TERNARY NEGATION
+  - On a triangular grid, moving a row down by one row flips every cell's orientation (▲ <-> ▽).
+    So clearing an ODD number of rows turns every triangle above the clear upside down, and the
+    balanced-ternary readout of everything above it is negated (T <-> F). Clearing an even number
+    of rows leaves orientation unchanged. Kham: "even if it is a bug it's a feature now."
+    Test #18 pins this behavior.
+
+  AUDIT NOTES (Kehai, 2026-11-13):
+  - Spec said "4 free tetriamonds"; only 3 free tetriamonds exist. The build uses the 4 ONE-SIDED
+    tetriamonds (P1/P2 are the mirror pair of the chiral bar). Independently verified, as were:
+    12 distinct free hexiamonds, all pieces edge-connected, all rotation states true rotations,
+    symmetry orders P1-P4 = 3,3,6,2 and H1-H12 = 3,6,6,6,6,6,6,1,3,6,6,3.
+  - Board viewBox was 13 units wide for a 6.5-unit board (half the frame empty); now sized to fit.
+  - Test #17 rewritten to a legal placement (the delivered test locked a piece over occupied cells).
+  - LIFT-1 hash corrected (was the empty-string SHA-256).
+
   LIFTS:
   - [LIFT-1] Mulberry32 PRNG
     * Provenance: Tommy Ettinger (2017), public domain 32-bit state PRNG (`mulberry32.c`).
-    * Hash (SHA-256 of canonical 5-line JS function): e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 / inline adaptation `createMulberry32`.
+    * Hash: none. [Audit fix 2026-11-13] The delivered value (e3b0c442...b855) is the SHA-256 of an EMPTY string, not of any source. No upstream file was attached to hash against; the function is written from the well-known public-domain algorithm.
     * Intentional changes: Added `normalizeSeed()` FNV-1a string hash converter so arbitrary string or integer seeds initialize the 32-bit state deterministically.
   - [LIFT-2] Triangular Grid 60° Lattice Vertex Rotation
     * Provenance: Standard 2D Euclidean rotation matrix R(pi/3) applied to equilateral triangle vertices anchored at (0.5, 0).
