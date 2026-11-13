@@ -3,7 +3,7 @@ A ternary puzzle game! ▲▽
 
 Falling pieces on a real equilateral triangular grid, with a live balanced-ternary readout of the board (▲ = **T**, empty = **Z**, ▽ = **F**). One HTML file, no dependencies, works offline. MIT.
 
-**Play:** open `index.html` in a browser (or the repo's GitHub Pages site).
+**Play:** https://consciousnode.github.io/Trytris/ (or open `index.html` in a browser).
 
 ![Trytris](screenshot.png)
 
