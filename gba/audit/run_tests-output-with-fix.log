@@ -1,0 +1,28 @@
+======================================================================
+TRYTRIS GBA - AUTOMATED 9-TEST VERIFICATION SUITE
+======================================================================
+[TEST 1] Build & Static Scan: PASS
+  - Default build == trytris.gba byte-for-byte: True (20944 B, CRC32=0x0734A3C3, SHA256=cd8f559e2f6f81187363ddfb4b6d90c7ea5bd545b8a99b555c6135234f90f564)
+  - Positive-control ROMs: trytris-swap-lr.gba (CRC32=0x8892B370), trytris-bad-offset.gba (CRC32=0x23C64154)
+  - Header checksum valid (0xBD == 0x47, 0xB2 == 0x96): True
+  - 'SRAM_V' save ID string present: True
+  - Static SWI scan (ARM=[('0x2e0', '0x5')], Thumb=[]): only SWI 0x05 = True
+[TEST 2] Input Mapping, DAS & Positive Control: PASS
+  - Single press-and-release 1-to-1 engine calls: True ([('LEFT', 1), ('RIGHT', 2), ('A_CW', 3), ('B_CCW', 4), ('DOWN', 5), ('UP', 6)])
+  - DAS Auto-Repeat (14-frame delay, 4-frame period -> 26 frames held = 4 calls, expected 4): True
+  - Pause (START) halts engine input acceptance: True
+  - Positive control (trytris-swap-lr.gba fails input mapping check): True
+[TEST 3] Engine Differential (60 Games, 180000 Frames): FAIL
+  - Games run: 60 (20 seeds x 3 modes), Total frames: 180000, Calls replayed: 16987, Locks verified: 1071
+  - 500-piece SeededBagGenerator sequence matches: 60/60
+  - Lock / achievement mismatches: 970, Final board mismatches: 0
+  - Positive controls: Mulberry32 constant change detected = True, Combo table change detected = False
+Traceback (most recent call last):
+  File "/tmp/tg/a/b/c/out/tests/run_tests_kehai.py", line 991, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/tg/a/b/c/out/tests/run_tests_kehai.py", line 523, in main
+    assert t3_pass, "Test 3 failed!"
+           ^^^^^^^
+AssertionError: Test 3 failed!
+rc=1

@@ -1,0 +1,12 @@
+--- gba/delivery/tests/run_tests.py	2026-11-14 21:53:56.993904857 -0500
++++ /tmp/tg/a/b/c/out/tests/run_tests_kehai.py	2026-11-14 21:28:18.941876798 -0500
+@@ -101,6 +101,9 @@
+         B1337.setRealtime(false);
+         window.RefTrytris = (function() {{
+             {eng_core}
++            // KEHAI AUDIT PATCH: delivered harness cuts the reference at runSelfTestSuite(), which drops
++            // getDropIntervalMs (reference line 2067); define it from the reference so the suite can run.
++            function getDropIntervalMs(level) {{ return Math.max(110, 850 - (level - 1) * 50); }}
+             const ROWS = 28, COLS = 12;
+             let eng = null;
+             {bot_core}

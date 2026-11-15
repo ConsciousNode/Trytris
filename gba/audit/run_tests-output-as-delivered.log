@@ -1,0 +1,57 @@
+======================================================================
+TRYTRIS GBA - AUTOMATED 9-TEST VERIFICATION SUITE
+======================================================================
+[TEST 1] Build & Static Scan: PASS
+  - Default build == trytris.gba byte-for-byte: True (20944 B, CRC32=0x0734A3C3, SHA256=cd8f559e2f6f81187363ddfb4b6d90c7ea5bd545b8a99b555c6135234f90f564)
+  - Positive-control ROMs: trytris-swap-lr.gba (CRC32=0x8892B370), trytris-bad-offset.gba (CRC32=0x23C64154)
+  - Header checksum valid (0xBD == 0x47, 0xB2 == 0x96): True
+  - 'SRAM_V' save ID string present: True
+  - Static SWI scan (ARM=[('0x2e0', '0x5')], Thumb=[]): only SWI 0x05 = True
+Traceback (most recent call last):
+  File "/tmp/tg/a/b/c/out/tests/run_tests.py", line 988, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/tg/a/b/c/out/tests/run_tests.py", line 194, in main
+    load_1337boy_and_reference(driver)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/tmp/tg/a/b/c/out/tests/run_tests.py", line 100, in load_1337boy_and_reference
+    driver.execute_script(f"""
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^
+        B1337.setRealtime(false);
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<25 lines>...
+        }})();
+        ^^^^^^
+    """)
+    ^^^^
+  File "/usr/local/lib/python3.13/site-packages/selenium/webdriver/remote/webdriver.py", line 677, in execute_script
+    return self.execute(command, {"script": script, "args": converted_args})["value"]
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/selenium/webdriver/remote/webdriver.py", line 566, in execute
+    self.error_handler.check_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/selenium/webdriver/remote/errorhandler.py", line 234, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.JavascriptException: Message: javascript error: getDropIntervalMs is not defined
+  (Session info: chrome=153.0.8010.12)
+Stacktrace:
+#0 0x56081b7865ca <unknown>
+#1 0x56081b0ba759 <unknown>
+#2 0x56081b0c189e <unknown>
+#3 0x56081b0c454c <unknown>
+#4 0x56081b15bbe1 <unknown>
+#5 0x56081b15aaef <unknown>
+#6 0x56081b103d9b <unknown>
+#7 0x56081b104b81 <unknown>
+#8 0x56081b749017 <unknown>
+#9 0x56081b747845 <unknown>
+#10 0x56081b7328c5 <unknown>
+#11 0x56081b74849a <unknown>
+#12 0x56081b71aef9 <unknown>
+#13 0x56081b770478 <unknown>
+#14 0x56081b770615 <unknown>
+#15 0x56081b784f13 <unknown>
+#16 0x7fc5dc49cb84 <unknown>
+#17 0x7fc5dc529ecc <unknown>
+
+rc=1
