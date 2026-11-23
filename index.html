@@ -712,6 +712,13 @@
             </div>
           </label>
           <label class="toggle-item">
+            <input type="checkbox" id="toggle-deadcells" checked>
+            <div class="item-label">
+              <strong>Dead-Cell Marker (K)</strong>
+              <span>× on empty cells no piece can ever reach on this board</span>
+            </div>
+          </label>
+          <label class="toggle-item">
             <input type="checkbox" id="toggle-ternary" checked>
             <div class="item-label">
               <strong>Balanced Ternary Display</strong>
@@ -1903,6 +1910,40 @@
     const sfx = new SoundEffects();
     const sessionAchievements = new Set();
     let showGhostPiece = true;
+    let showDeadCells = true;
+
+    /* Dead-cell marker (Ed Interim, 2026-11-23).
+     * A cell is DEAD when it is empty and no piece in the current vocabulary can reach ANY state
+     * (position + rotation) that covers it, starting from spawn, using the engine's own
+     * moveHorizontal / rotate / stepGravityDown. Adding locked cells only removes reachable states,
+     * so a dead cell stays dead until a line clear changes the board. (Defining it by "can lock there"
+     * instead marks almost every mid-air cell on an empty board; see The-Office Quod audit.) */
+    let deadScratch = null, deadCacheKey = '', deadCacheCells = [];
+    function computeDeadCells(engine) {
+      const key = engine.mode + '|' + engine.level + '|' + engine.board.map(row => row.map(v => v ? 1 : 0).join('')).join('');
+      if (key === deadCacheKey) return deadCacheCells;
+      if (!deadScratch) deadScratch = new TrytrisEngine({ seed: 1, mode: 'NORMAL' });
+      const s = deadScratch; s.board = engine.board;
+      const cover = Array.from({ length: TOTAL_ROWS }, () => Array(GRID_COLS).fill(false));
+      const moves = [e => e.moveHorizontal(-1), e => e.moveHorizontal(1), e => e.rotate(1), e => e.rotate(-1), e => e.stepGravityDown()];
+      for (const def of getActiveVocabulary(engine.mode, engine.level)) {
+        if (!s.canPlace(def, 0, 1, 3)) continue;
+        const seen = new Set(['1,3,0']), queue = [[1, 3, 0]];
+        while (queue.length) {
+          const [r, c, rot] = queue.pop();
+          for (const [dr, dc] of def.rotations[rot]) { const rr = r + dr, cc = c + dc; if (rr >= 0 && rr < TOTAL_ROWS && cc >= 0 && cc < GRID_COLS) cover[rr][cc] = true; }
+          for (const mv of moves) {
+            s.gameOver = false; s.paused = false; s.activePiece = { def, rotIndex: rot, r, c };
+            if (mv(s)) { const p = s.activePiece, k = p.r + ',' + p.c + ',' + p.rotIndex; if (!seen.has(k)) { seen.add(k); queue.push([p.r, p.c, p.rotIndex]); } }
+          }
+        }
+      }
+      s.activePiece = null;
+      const dead = [];
+      for (let r = BUFFER_ROWS; r < TOTAL_ROWS; r++) for (let c = 0; c < GRID_COLS; c++) if (engine.board[r][c] === null && !cover[r][c]) dead.push([r, c]);
+      deadCacheKey = key; deadCacheCells = dead;
+      return dead;
+    }
     let showTernaryDisplay = true;
 
     const liveEngine = new TrytrisEngine({
@@ -1935,6 +1976,10 @@
           cellPolygons[vr][c] = poly;
         }
       }
+      const deadLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      deadLayer.setAttribute('id', 'dead-layer');
+      deadLayer.setAttribute('pointer-events', 'none');
+      boardSvg.appendChild(deadLayer);
     }
 
     function renderBoardSVG() {
@@ -1989,6 +2034,25 @@
             poly.setAttribute('fill-opacity', '1');
             poly.setAttribute('stroke', '#f8fafc');
             poly.setAttribute('stroke-width', '0.05');
+          }
+        }
+      }
+
+      // Dead-cell marker
+      const deadLayer = document.getElementById('dead-layer');
+      if (deadLayer) {
+        deadLayer.innerHTML = '';
+        if (showDeadCells && !liveEngine.gameOver) {
+          for (const [r, c] of computeDeadCells(liveEngine)) {
+            const verts = getTriangleVertices(r - BUFFER_ROWS, c, TRI_SIDE);
+            const cx = (verts[0].x + verts[1].x + verts[2].x) / 3, cy = (verts[0].y + verts[1].y + verts[2].y) / 3;
+            const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            t.setAttribute('x', cx.toFixed(4)); t.setAttribute('y', cy.toFixed(4));
+            t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'central');
+            t.setAttribute('font-size', (TRI_SIDE * 0.42).toFixed(4)); t.setAttribute('font-weight', '700');
+            t.setAttribute('fill', '#f87171'); t.setAttribute('fill-opacity', '0.85');
+            t.textContent = '×';
+            deadLayer.appendChild(t);
           }
         }
       }
@@ -2289,6 +2353,18 @@
       });
     });
 
+    document.getElementById('toggle-deadcells').addEventListener('change', (e) => {
+      showDeadCells = e.target.checked;
+      renderBoardSVG();
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (e.key === 'k' || e.key === 'K') {
+        showDeadCells = !showDeadCells;
+        document.getElementById('toggle-deadcells').checked = showDeadCells;
+        renderBoardSVG();
+      }
+    });
     document.getElementById('toggle-ghost').addEventListener('change', (e) => {
       showGhostPiece = e.target.checked;
       updateFullUI();
